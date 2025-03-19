@@ -1,0 +1,11 @@
+[package]
+name = "main"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+figlet-rs = "0.1.5"
+colored = "2.2.0"
+walkdir = "1.0.7"
+sysinfo = "0.33.1"
+sha2 = "0.10.8"

@@ -5,6 +5,7 @@ use std::io::{ Write, BufWriter, Read };
 use std::process::Command;
 use std::path::{ Path };
 use std::env;
+use std::io;
 use walkdir::WalkDir;
 use sysinfo::{ System, Process, Disks, Pid, DiskKind };
 use sha2::{ Sha256, Digest };
@@ -71,11 +72,11 @@ fn calculate_sha256( file_path: &Path ) -> Option<String> {
 
 fn delete_file( file_path: &Path ) {
     if let Err( e ) = fs::remove_file( file_path ) {
-        let msg = format!( "Ошибка удаления {}: {}", file_path.display(), e );
+        let msg = format!( "Can't delete {}: {}", file_path.display(), e );
         println!( "{}", msg );
         log_message( &msg );
     } else {
-        let msg = format!( "Удалён: {}", file_path.display() );
+        let msg = format!( "Deleted: {}", file_path.display() );
         println!( "{}", msg );
         log_message( &msg );
     }
@@ -84,7 +85,7 @@ fn delete_file( file_path: &Path ) {
 fn check_and_delete( file_path: &Path ) {
     if let Some( file_name ) = file_path.file_name().and_then( |n| n.to_str() ) {
         if BRONTOK_NAMES.contains( &file_name ) {
-            let msg = format!( "Обнаружен вирус по имени: {}", file_path.display() );
+            let msg = format!( "Dangerous file: {}", file_path.display() );
             println!( "{}", msg );
             log_message( &msg );
             delete_file( file_path );
@@ -94,7 +95,7 @@ fn check_and_delete( file_path: &Path ) {
 
     if let Some( hash ) = calculate_sha256( file_path ) {
         if BRONTOK_HASHES.contains( &hash.as_str() ) {
-            let msg = format!( "Обнаружен вирус по хешу: {} ({})", file_path.display(), hash );
+            let msg = format!( "Dangerous hash: {} ({})", file_path.display(), hash );
             println!( "{}", msg );
             log_message( &msg );
             delete_file( file_path );
@@ -106,8 +107,8 @@ fn find_and_remove_virus() {
     let drives = get_drives();
     let extra_dirs = get_additional_scan_dirs();
 
-    println!( "Поиск Brontok..." );
-    log_message( "=== Начат поиск Brontok ===" );
+    println!( "Searching is started..." );
+    log_message( "=== Searching is started ===" );
 
     for drive in drives {
         for entry in WalkDir::new( &drive ).into_iter().filter_map( Result::ok ) {
@@ -123,7 +124,7 @@ fn find_and_remove_virus() {
         }
     }
 
-    log_message( "=== Завершён поиск Brontok ===" );
+    log_message( "=== Searching is finished ===" );
 }
 
 fn clean_registry() {
@@ -132,9 +133,9 @@ fn clean_registry() {
         .output();
 
     let msg = if output.is_ok() {
-        "Brontok удалён из автозагрузки.".to_string()
+        "Brontok deleted from the startup.".to_string()
     } else {
-        "Ошибка очистки реестра.".to_string()
+        "Can't clean the register.".to_string()
     };
 
     println!( "{}", msg );
@@ -145,13 +146,13 @@ fn check_running_processes() {
     let mut system = System::new_all();
     system.refresh_all();
 
-    println!( "Проверка запущенных процессов..." );
-    log_message( "=== Проверка процессов ===" );
+    println!( "Checking system processes..." );
+    log_message( "=== Checking system processes ===" );
 
     for ( pid, process ) in system.processes() {
         let process_name = process.name().to_string_lossy().to_lowercase();
         if BRONTOK_NAMES.contains( &process_name.as_str() ) {
-            let msg = format!( "Обнаружен запущенный процесс: {}", process_name );
+            let msg = format!( "Dangerous process: {}", process_name );
             println!( "{}", msg );
             log_message( &msg );
             kill_process( pid );
@@ -163,7 +164,7 @@ fn kill_process( pid: &Pid ) {
     let _ = Command::new( "taskkill" )
         .args( ["/PID", &pid.to_string(), "/F"] )
         .output();
-    let msg = format!( "Остановлен процесс с PID {}", pid );
+    let msg = format!( "Stopped: PID {}", pid );
     println!( "{}", msg );
     log_message( &msg );
 }
@@ -178,18 +179,22 @@ fn main() {
         }
     }
 
+    let mut q = String::new();
+    println!( "Press any key to start..." );
+    io::stdin().read_line( &mut q ).ok();
+
     if env::consts::OS != "windows" {
-        println!( "Эта программа работает только на Windows!" );
+        println!( "Only for Windows!" );
         return;
     }
 
-    println!( "Запуск удаления Brontok..." );
-    log_message( "=== Запуск программы ===" );
+    println!( "Starting Brontok deleting..." );
+    log_message( "=== Starting... ===" );
 
     check_running_processes();
     find_and_remove_virus();
     clean_registry();
 
-    println!( "Готово! Перезагрузите компьютер." );
-    log_message( "=== Завершение работы ===" );
+    println!( "Reload your PC." );
+    log_message( "=== Ending... ===" );
 }
